@@ -5,7 +5,7 @@ require("dotenv").config();
 const userRoutes = require('./routes/userRoutes'); // Import user routes
 
 // Check if the environment variables are set
-const dbUrl = process.env.DATABASE_URL || "your-default-mongodb-url";
+const dbUrl = process.env.DATABASE_URL ;
 const port = process.env.PORT || 3000; // Fallback to 3000 if PORT is undefined
 
 // Initialize the Express application
