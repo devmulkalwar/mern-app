@@ -2,7 +2,7 @@ const User = require("../models/Users");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const SECRETE_KEY = process.env.DATABASE_URL;
+const SECRETE_KEY = process.env.SECRETE_KEY;
 
 exports.registerUser = async (req, res) => {
   try {
@@ -45,59 +45,74 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate that all fields are present
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ status: false, message: "All fields are required" });
-    }
-
+    // Check if the user exists
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+
+    if (!user) {
       return res
         .status(400)
-        .json({ status: false, message: "Invalid credentials" });
+        .json({ status: false, message: "Email not found" });
     }
 
-    const token = jwt.sign({ id: user._id, email: user.email }, SECRETE_KEY, {
-      expiresIn: "1hr",
-    });
+    // Check if the password is correct
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res
+        .status(400)
+        .json({ status: false, message: "Invalid password" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, SECRETE_KEY, { expiresIn: '1h' })
+
+    // If login is successful
     return res
-      .status(201)
-      .json({ status: true, message: "Login Successful ...", token: token });
+      .status(200)
+      .json({ status: true, message: "Login successful", token });
+
   } catch (error) {
-    // Log and respond with an error message
-    console.error("Error in /login route:", error);
+    console.error("Error during login:", error);
     return res
       .status(500)
-      .json({ status: false, message: "Internal Server Error" });
+      .json({ status: false, message: "Internal server error" });
   }
 };
 
 exports.profile = async (req, res) => {
   try {
-    const token = req.headers?.authorization.split(" ")[1];
-    if (!token) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res
-        .status(400)
-        .json({ status: false, message: "Invalid token.." });
+        .status(401)
+        .json({ status: false, message: "Authorization header missing or malformed" });
     }
 
-    jwt.verify(token, SECRETE_KEY, async (err, decode) => {
-      const user = await User.findById(decode?.id);
-      if(!user){
+    const token = authHeader.split(" ")[1];
+
+    try {
+      const decoded = jwt.verify(token, SECRETE_KEY);
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
         return res
-        .status(400)
-        .json({ status: false, message: "Access Denied.." });
+          .status(404)
+          .json({ status: false, message: "User not found" });
       }
-      const userData = { id: user?.id, name: user?.name, email: user?.email };
+
+      const userData = { id: user.id, name: user.name, email: user.email };
       return res
-        .status(201)
-        .json({ status: true, message: "Profile Data", data: userData });
-    });
+        .status(200)
+        .json({ status: true, message: "Profile data retrieved successfully", data: userData });
+    } catch (err) {
+      // Token verification failed
+      return res
+        .status(403)
+        .json({ status: false, message: "Invalid token" });
+    }
   } catch (error) {
-    // Log and respond with an error message
-    console.error("Error in /login route:", error);
+    console.error("Error in /profile route:", error);
     return res
       .status(500)
       .json({ status: false, message: "Internal Server Error" });
