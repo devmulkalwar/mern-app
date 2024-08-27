@@ -1,11 +1,21 @@
-import React from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import{ jwtDecode} from 'jwt-decode';
+import { Navigate, Outlet } from 'react-router-dom';
 
 const ProtectedRoutes = () => {
-  const token = JSON.parse(localStorage.getItem("token"));
+  const token = localStorage.getItem("token");
 
-  // Redirect to login page if token is not present
-  return token ? <Outlet /> : <Navigate to="/login" />;
+  let isValid = false;
+  if (token) {
+    try {
+      const decodedToken = jwtDecode(token);
+      // Perform additional checks here if needed, e.g., token expiration
+      isValid = !!decodedToken;
+    } catch (error) {
+      console.error('Invalid token:', error);
+    }
+  }
+
+  return isValid ? <Outlet /> : <Navigate to="/login" />;
 };
 
 export default ProtectedRoutes;

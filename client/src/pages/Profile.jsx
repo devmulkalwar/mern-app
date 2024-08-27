@@ -20,11 +20,15 @@ const Profile = () => {
         Authorization: `Bearer ${token}`,
       };
 
-      const response = await axios.post(
+      // Adjust the API endpoint and method as needed
+      const response = await axios.get(
         "http://localhost:3000/api/user/profile",
-        {},
         { headers }
       );
+
+      // Check if response data is in expected format
+      console.log("API Response:", response.data); // Log response data for debugging
+
       setUser(response.data.data); // Adjust based on the API response structure
       setLoading(false);
     } catch (error) {
